@@ -1,27 +1,41 @@
-name: Build APK
+name: Build APK (Debug)
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       
-      - name: Set up JDK 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
+          distribution: 'temurin'
       
-      - name: Build
+      - name: Setup Gradle
         run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          echo "Downloading Gradle..."
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /opt
+          export PATH=/opt/gradle-8.2/bin:$PATH
+          gradle --version
       
-      - name: Upload Artifact
+      - name: Build with Gradle
+        run: |
+          export PATH=/opt/gradle-8.2/bin:$PATH
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+      
+      - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: APK
+          name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
