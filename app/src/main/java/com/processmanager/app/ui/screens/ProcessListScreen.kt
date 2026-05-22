@@ -40,7 +40,6 @@ fun ProcessListScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val filteredProcesses = viewModel.getFilteredProcesses()
-    val hasPermission = remember { mutableStateOf(viewModel.hasUsageStatsPermission(context)) }
 
     LaunchedEffect(Unit) {
         viewModel.loadProcesses(context)
@@ -52,12 +51,7 @@ fun ProcessListScreen(
             TopAppBar(
                 title = { Text("进程管理器") },
                 actions = {
-                    IconButton(onClick = {
-                        hasPermission.value = viewModel.hasUsageStatsPermission(context)
-                        if (hasPermission.value) {
-                            viewModel.loadProcesses(context)
-                        }
-                    }) {
+                    IconButton(onClick = { viewModel.loadProcesses(context) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "刷新")
                     }
                 }
@@ -69,44 +63,6 @@ fun ProcessListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (!hasPermission.value) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = "权限警告",
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "需要权限",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "请授予\"使用情况访问\"权限以查看完整进程列表",
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(onClick = { viewModel.openUsageStatsSettings(context) }) {
-                            Text("前往设置")
-                        }
-                    }
-                }
-            }
-
             SearchBar(
                 query = searchQuery,
                 onQueryChange = { viewModel.setSearchQuery(it) },
@@ -126,38 +82,17 @@ fun ProcessListScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                if (filteredProcesses.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = "无结果",
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "未找到进程",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(filteredProcesses, key = { it.pid }) { process ->
-                            ProcessItem(
-                                process = process,
-                                viewModel = viewModel,
-                                onClick = { onProcessClick(process) }
-                            )
-                        }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredProcesses, key = { it.pid }) { process ->
+                        ProcessItem(
+                            process = process,
+                            viewModel = viewModel,
+                            onClick = { onProcessClick(process) }
+                        )
                     }
                 }
             }
@@ -226,7 +161,7 @@ fun ProcessItem(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+    {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
