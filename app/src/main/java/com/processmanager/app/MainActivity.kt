@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -53,7 +54,7 @@ fun ProcessManagerApp() {
                         NavigationBarItem(
                             selected = currentScreen is Screen.Stats,
                             onClick = { currentScreen = Screen.Stats },
-                            icon = { Icon(Icons.Default.Info, contentDescription = "统计") },
+                            icon = { Icon(Icons.Default.Refresh, contentDescription = "统计") },
                             label = { Text("统计") }
                         )
                     }
