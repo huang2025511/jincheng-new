@@ -182,21 +182,21 @@ fun ProcessItem(
                     }
                     is VectorDrawable -> {
                         Icon(
-                            imageVector = Icons.Default.Smartphone,
+                            imageVector = Icons.Default.Home,
                             contentDescription = process.appName,
                             modifier = Modifier.size(48.dp)
                         )
                     }
                     else -> {
                         Icon(
-                            imageVector = Icons.Default.Smartphone,
+                            imageVector = Icons.Default.Home,
                             contentDescription = process.appName,
                             modifier = Modifier.size(48.dp)
                         )
                     }
                 }
             } ?: Icon(
-                imageVector = Icons.Default.Smartphone,
+                imageVector = Icons.Default.Home,
                 contentDescription = process.appName,
                 modifier = Modifier.size(48.dp)
             )
