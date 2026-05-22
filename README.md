@@ -45,19 +45,33 @@ app/
 │       └── ...
 ```
 
-## 构建和运行
+## 📦 下载和安装APK
 
-### 前置要求
+### 方式一：使用GitHub Actions自动构建（推荐）
+
+1. 访问仓库 Actions 页面：https://github.com/huang2025511/processviewer2026/actions
+2. 点击 **"New workflow"** 创建自动构建工作流
+3. 或者查看 [BUILD.md](./BUILD.md) 文件获取详细步骤
+4. 构建完成后直接下载APK文件
+
+### 方式二：本地构建
+
+#### 前置要求
 - Android Studio Hedgehog (2023.1.1) 或更高版本
-- JDK 8 或更高版本
+- JDK 17 或更高版本
 - Android SDK API 34
 
-### 构建步骤
+#### 构建步骤
 1. 克隆项目
+```bash
+git clone https://github.com/huang2025511/processviewer2026.git
+```
 2. 使用Android Studio打开项目
 3. 等待Gradle同步完成
-4. 连接Android设备或启动模拟器
-5. 点击运行按钮或使用命令：`./gradlew installDebug`
+4. 菜单：Build → Build Bundle(s) / APK(s) → Build APK(s)
+5. APK文件位置：`app/build/outputs/apk/debug/app-debug.apk`
+
+详细构建指南请查看 [BUILD.md](./BUILD.md)
 
 ## 使用说明
 
