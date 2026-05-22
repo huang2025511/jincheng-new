@@ -5,13 +5,12 @@
 ### 步骤1：打开仓库
 访问：https://github.com/huang2025511/processviewer2026
 
-### 步骤2：创建新文件
-1. 点击仓库页面上方的 **"Add file"** 按钮
-2. 选择 **"Create new file"**
+### 步骤2：编辑现有文件
+1. 点击仓库中的 `.github/workflows/build.yml` 文件
+2. 点击右上角的编辑按钮（铅笔图标 ✏️）
 
-### 步骤3：填写文件信息
-- **文件路径**（在页面顶部）：`.github/workflows/build.yml`
-- **文件内容**：复制粘贴下面的内容
+### 步骤3：替换文件内容
+把下面的完整代码复制进去，替换原有的所有内容：
 
 ```yaml
 name: Build Android APK
@@ -38,8 +37,14 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Generate Gradle Wrapper
+        run: |
+          cat > build.gradle << 'EOF'
+          task wrapper(type: Wrapper) {
+              gradleVersion = '8.2'
+          }
+          EOF
+          gradle wrapper --gradle-version 8.2 --no-daemon
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon
@@ -53,7 +58,7 @@ jobs:
 ```
 
 ### 步骤4：提交文件
-1. 填写提交信息：`Add GitHub Actions workflow`
+1. 填写提交信息：`Fix Gradle wrapper issue`
 2. 点击绿色按钮 **"Commit changes"**
 
 ### 步骤5：获取APK！
