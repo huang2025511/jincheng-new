@@ -1,70 +1,28 @@
 name: Build Android APK
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-      - name: Set up JDK
-        uses: actions/setup-java@v3
+      - name: Set up our JDK distribution
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
+          distribution: 'temurin'
       
-      - name: Debug Environment
-        run: |
-          echo "=== Java Version ==="
-          java -version
-          echo ""
-          echo "=== JAVA_HOME ==="
-          echo $JAVA_HOME
-          echo ""
-          echo "=== ANDROID_HOME ==="
-          echo $ANDROID_HOME
-          echo ""
-          echo "=== Gradle Wrapper Files ==="
-          ls -la gradle/wrapper/
-          file gradle/wrapper/gradle-wrapper.jar
-          echo ""
-          echo "=== Gradle Wrapper Properties ==="
-          cat gradle/wrapper/gradle-wrapper.properties
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
       
       - name: Build with Gradle
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --info 2>&1 | tee build.log
-        continue-on-error: true
+        run: ./gradlew assembleDebug
       
-      - name: Show Build Log
-        if: always()
-        run: |
-          echo "=== Last 100 lines of build log ==="
-          tail -100 build.log || echo "No build log found"
-          echo ""
-          echo "=== Checking for APK ==="
-          find . -name "*.apk" -type f 2>/dev/null
-          echo ""
-          echo "=== Checking build directory ==="
-          ls -la app/build/outputs/ 2>/dev/null || echo "No outputs directory"
-      
-      - name: Upload build artifacts
-        if: success()
-        uses: actions/upload-artifact@v3
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
-      
-      - name: Show failure summary
-        if: failure()
-        run: |
-          echo "=== BUILD FAILED ==="
-          echo "Please check the logs above for more details."
-          exit 1
