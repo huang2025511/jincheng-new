@@ -1,4 +1,4 @@
-name: Build APK
+name: Build and Test
 
 on:
   push:
@@ -29,18 +29,29 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v2
     
-    - name: Build
+    - name: Build Debug APK
       run: |
         chmod +x gradlew
         ./gradlew --version
         ./gradlew assembleDebug --no-daemon --info 2>&1 | tee build.log || cat build.log
     
-    - name: Upload Artifact
+    - name: Run Unit Tests
+      run: |
+        ./gradlew testDebugUnitTest --no-daemon --info 2>&1 | tee test.log || cat test.log
+    
+    - name: Upload APK Artifact
       if: success()
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk
+    
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: app/build/test-results/
     
     - name: Debug build log
       if: failure()
