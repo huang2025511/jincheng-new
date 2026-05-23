@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.processmanager.app.models.ProcessInfo
 import com.processmanager.app.ui.screens.ProcessDetailScreen
@@ -31,10 +32,6 @@ class MainActivity : ComponentActivity() {
             ProcessManagerApp()
         }
     }
-
-    override fun onResume() {
-        super.onResume()
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,7 +40,7 @@ fun ProcessManagerApp() {
     val viewModel: ProcessViewModel = viewModel()
     var currentScreen by remember { mutableStateOf<Screen>(Screen.ProcessList) }
     var selectedProcess by remember { mutableStateOf<ProcessInfo?>(null) }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.loadProcesses(context)

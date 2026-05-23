@@ -26,6 +26,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.processmanager.app.models.ProcessCategory
 import com.processmanager.app.models.ProcessInfo
 import com.processmanager.app.viewmodels.ProcessViewModel
@@ -45,10 +48,10 @@ fun ProcessListScreen(
     val needsUsagePermission by viewModel.needsUsagePermission.collectAsState()
 
     // 生命周期感知，当用户回到应用时重新检查权限和加载数据
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.checkUsagePermission(context)
                 viewModel.loadRecentTasks(context)
             }
@@ -277,7 +280,6 @@ private fun RecentTaskItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     Card(
         modifier = modifier
             .width(100.dp)
