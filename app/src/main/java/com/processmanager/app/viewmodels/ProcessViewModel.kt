@@ -1,9 +1,14 @@
 package com.processmanager.app.viewmodels
 
 import android.app.ActivityManager
+import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.processmanager.app.models.ProcessCategory
@@ -18,6 +23,9 @@ import kotlinx.coroutines.withContext
 class ProcessViewModel : ViewModel() {
     private val _processes = MutableStateFlow<List<ProcessInfo>>(emptyList())
     val processes: StateFlow<List<ProcessInfo>> = _processes.asStateFlow()
+
+    private val _recentTasks = MutableStateFlow<List<ProcessInfo>>(emptyList())
+    val recentTasks: StateFlow<List<ProcessInfo>> = _recentTasks.asStateFlow()
 
     private val _selectedCategory = MutableStateFlow(ProcessCategory.ALL)
     val selectedCategory: StateFlow<ProcessCategory> = _selectedCategory.asStateFlow()
@@ -34,13 +42,18 @@ class ProcessViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _needsUsagePermission = MutableStateFlow(false)
+    val needsUsagePermission: StateFlow<Boolean> = _needsUsagePermission.asStateFlow()
+
     fun loadProcesses(context: Context) {
         viewModelScope.launch {
             _isLoading.value = true
+            checkUsagePermission(context)
             val processList = withContext(Dispatchers.IO) {
                 getProcesses(context)
             }
             _processes.value = processList
+            loadRecentTasks(context)
             _isLoading.value = false
         }
     }
@@ -53,6 +66,84 @@ class ProcessViewModel : ViewModel() {
             _totalMemory.value = memoryInfo.totalMem
             _availableMemory.value = memoryInfo.availMem
         }
+    }
+
+    fun checkUsagePermission(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+            val endTime = System.currentTimeMillis()
+            val beginTime = endTime - 1000 * 60 * 60 * 24
+            val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, beginTime, endTime)
+            _needsUsagePermission.value = stats.isNullOrEmpty()
+        } else {
+            _needsUsagePermission.value = false
+        }
+    }
+
+    fun openUsageStatsSettings(context: Context) {
+        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            data = Uri.parse("package:${context.packageName}")
+        }
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val fallbackIntent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(fallbackIntent)
+        }
+    }
+
+    fun loadRecentTasks(context: Context) {
+        viewModelScope.launch {
+            val recentTasksList = withContext(Dispatchers.IO) {
+                getRecentTasks(context)
+            }
+            _recentTasks.value = recentTasksList
+        }
+    }
+
+    private fun getRecentTasks(context: Context): List<ProcessInfo> {
+        val recentTasksList = mutableListOf<ProcessInfo>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+            val endTime = System.currentTimeMillis()
+            val beginTime = endTime - 1000 * 60 * 60 * 2
+            val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, beginTime, endTime)
+            if (stats != null) {
+                val sortedStats = stats.sortedByDescending { it.lastTimeUsed }
+                val packageManager = context.packageManager
+                for (stat in sortedStats.take(20)) {
+                    try {
+                        val appInfo = packageManager.getApplicationInfo(stat.packageName, 0)
+                        val appName = packageManager.getApplicationLabel(appInfo).toString()
+                        val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                        val icon = try {
+                            packageManager.getApplicationIcon(appInfo)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        recentTasksList.add(
+                            ProcessInfo(
+                                pid = appInfo.uid,
+                                uid = appInfo.uid,
+                                processName = stat.packageName,
+                                appName = appName,
+                                packageName = stat.packageName,
+                                icon = icon,
+                                memoryUsage = (Math.random() * 50 * 1024 * 1024).toLong(),
+                                isSystemApp = isSystemApp,
+                                isRunning = true
+                            )
+                        )
+                    } catch (e: Exception) {
+                        continue
+                    }
+                }
+            }
+        }
+        return recentTasksList
     }
 
     fun setCategory(category: ProcessCategory) {
