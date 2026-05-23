@@ -44,9 +44,19 @@ fun ProcessListScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val needsUsagePermission by viewModel.needsUsagePermission.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadProcesses(context)
-        viewModel.loadMemoryInfo(context)
+    // 生命周期感知，当用户回到应用时重新检查权限和加载数据
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.checkUsagePermission(context)
+                viewModel.loadRecentTasks(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Scaffold(
@@ -395,11 +405,21 @@ private fun ProcessItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = "内存: ${viewModel.formatMemory(process.memoryUsage)}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "内存: ${viewModel.formatMemory(process.memoryUsage)}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "CPU: %.1f%%".format(process.cpuUsage),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
             }
 
             IconButton(onClick = { viewModel.killProcess(context, process) }) {

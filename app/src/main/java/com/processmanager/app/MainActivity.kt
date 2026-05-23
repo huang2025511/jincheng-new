@@ -31,6 +31,10 @@ class MainActivity : ComponentActivity() {
             ProcessManagerApp()
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,6 +43,12 @@ fun ProcessManagerApp() {
     val viewModel: ProcessViewModel = viewModel()
     var currentScreen by remember { mutableStateOf<Screen>(Screen.ProcessList) }
     var selectedProcess by remember { mutableStateOf<ProcessInfo?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.loadProcesses(context)
+        viewModel.loadMemoryInfo(context)
+    }
 
     MaterialTheme {
         Scaffold(
