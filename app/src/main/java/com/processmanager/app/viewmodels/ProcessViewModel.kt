@@ -198,42 +198,90 @@ class ProcessViewModel : ViewModel() {
     private fun getProcesses(context: Context): List<ProcessInfo> {
         val packageManager = context.packageManager
         val processes = mutableListOf<ProcessInfo>()
+        val packageNames = mutableSetOf<String>()
 
         try {
-            // 获取所有已安装的应用
-            val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+            val intent = Intent(Intent.ACTION_MAIN, null)
+            intent.addCategory(Intent.CATEGORY_LAUNCHER)
+            val resolveInfoList = packageManager.queryIntentActivities(intent, PackageManager.GET_META_DATA)
 
-            for (app in installedApps) {
-                try {
-                    val isSystemApp = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                    val appName = packageManager.getApplicationLabel(app).toString()
-                    val icon = try {
-                        packageManager.getApplicationIcon(app)
-                    } catch (e: Exception) {
-                        null
-                    }
+            for (resolveInfo in resolveInfoList) {
+                val pkgName = resolveInfo.activityInfo.packageName
+                if (!packageNames.contains(pkgName)) {
+                    packageNames.add(pkgName)
+                    try {
+                        val appInfo = packageManager.getApplicationInfo(pkgName, 0)
+                        val appName = packageManager.getApplicationLabel(appInfo).toString()
+                        val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                        val icon = try {
+                            packageManager.getApplicationIcon(appInfo)
+                        } catch (e: Exception) {
+                            null
+                        }
 
-                    processes.add(
-                        ProcessInfo(
-                            pid = app.uid,
-                            uid = app.uid,
-                            processName = app.packageName,
-                            appName = appName,
-                            packageName = app.packageName,
-                            icon = icon,
-                            memoryUsage = (Math.random() * 100 * 1024 * 1024).toLong(),
-                            isSystemApp = isSystemApp,
-                            isRunning = true,
-                            cpuUsage = (Math.random() * 50).toFloat(),
-                            threadCount = (Math.random() * 50).toInt()
+                        processes.add(
+                            ProcessInfo(
+                                pid = appInfo.uid,
+                                uid = appInfo.uid,
+                                processName = pkgName,
+                                appName = appName,
+                                packageName = pkgName,
+                                icon = icon,
+                                memoryUsage = (Math.random() * 100 * 1024 * 1024).toLong(),
+                                isSystemApp = isSystemApp,
+                                isRunning = true,
+                                cpuUsage = (Math.random() * 50).toFloat(),
+                                threadCount = (Math.random() * 50).toInt()
+                            )
                         )
-                    )
-                } catch (e: Exception) {
-                    continue
+                    } catch (e: Exception) {
+                        continue
+                    }
                 }
             }
         } catch (e: Exception) {
-            // 出错时至少添加当前应用
+            // 忽略
+        }
+
+        try {
+            val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+            for (app in installedApps) {
+                if (!packageNames.contains(app.packageName)) {
+                    packageNames.add(app.packageName)
+                    try {
+                        val isSystemApp = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                        val appName = packageManager.getApplicationLabel(app).toString()
+                        val icon = try {
+                            packageManager.getApplicationIcon(app)
+                        } catch (e: Exception) {
+                            null
+                        }
+
+                        processes.add(
+                            ProcessInfo(
+                                pid = app.uid,
+                                uid = app.uid,
+                                processName = app.packageName,
+                                appName = appName,
+                                packageName = app.packageName,
+                                icon = icon,
+                                memoryUsage = (Math.random() * 100 * 1024 * 1024).toLong(),
+                                isSystemApp = isSystemApp,
+                                isRunning = true,
+                                cpuUsage = (Math.random() * 50).toFloat(),
+                                threadCount = (Math.random() * 50).toInt()
+                            )
+                        )
+                    } catch (e: Exception) {
+                        continue
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // 忽略
+        }
+
+        if (processes.isEmpty()) {
             try {
                 val appInfo = packageManager.getApplicationInfo(context.packageName, 0)
                 val appName = packageManager.getApplicationLabel(appInfo).toString()
@@ -251,7 +299,7 @@ class ProcessViewModel : ViewModel() {
                         cpuUsage = (Math.random() * 20).toFloat()
                     )
                 )
-            } catch (e2: Exception) {
+            } catch (e: Exception) {
                 // 忽略
             }
         }

@@ -1,4 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#3DDC84</color>
+    
+    <color name="primary">#1976D2</color>
+    <color name="onPrimary">#FFFFFF</color>
+    <color name="primaryContainer">#E3F2FD</color>
+    <color name="onPrimaryContainer">#001E3C</color>
+    
+    <color name="secondary">#424242</color>
+    <color name="onSecondary">#FFFFFF</color>
+    <color name="secondaryContainer">#EFEFEF</color>
+    <color name="onSecondaryContainer">#1B1B1B</color>
+    
+    <color name="tertiary">#7B1FA2</color>
+    <color name="onTertiary">#FFFFFF</color>
+    <color name="tertiaryContainer">#EDE7F6</color>
+    <color name="onTertiaryContainer">#280644</color>
+    
+    <color name="error">#D32F2F</color>
+    <color name="onError">#FFFFFF</color>
+    <color name="errorContainer">#FFEBEE</color>
+    <color name="onErrorContainer">#1B0000</color>
+    
+    <color name="background">#FFFFFF</color>
+    <color name="onBackground">#1A1A1A</color>
+    
+    <color name="surface">#FFFFFF</color>
+    <color name="onSurface">#1A1A1A</color>
+    <color name="surfaceVariant">#E4E4E4</color>
+    <color name="onSurfaceVariant">#424242</color>
+    
+    <color name="outline">#BDBDBD</color>
+    <color name="outlineVariant">#EEEEEE</color>
+    
+    <color name="shadow">#000000</color>
+    <color name="scrim">#000000</color>
+    
+    <color name="inverseSurface">#212121</color>
+    <color name="inverseOnSurface">#FFFFFF</color>
+    <color name="inversePrimary">#BBDEFB</color>
+    
+    <color name="surfaceDim">#EFEFEF</color>
+    <color name="surfaceBright">#FFFFFF</color>
+    <color name="surfaceContainerLowest">#FFFFFF</color>
+    <color name="surfaceContainerLow">#F5F5F5</color>
+    <color name="surfaceContainer">#FAFAFA</color>
+    <color name="surfaceContainerHigh">#FFFFFF</color>
+    <color name="surfaceContainerHighest">#FFFFFF</color>
 </resources>
