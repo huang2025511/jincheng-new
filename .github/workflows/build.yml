@@ -5,17 +5,56 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    
     - name: set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
+    
     - name: Build
       run: |
         chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon
-    - name: Upload
+        ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log
+      continue-on-error: true
+    
+    - name: Check result
+      run: |
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "BUILD_STATUS=success" >> $GITHUB_ENV
+          echo "APK_SIZE=$(ls -lh app/build/outputs/apk/debug/app-debug.apk | awk '{print $5}')" >> $GITHUB_ENV
+        else
+          echo "BUILD_STATUS=failure" >> $GITHUB_ENV
+        fi
+    
+    - name: Create build report
+      run: |
+        echo "# Build Report" > BUILD_REPORT.md
+        echo "" >> BUILD_REPORT.md
+        echo "## Status: ${{ env.BUILD_STATUS }}" >> BUILD_REPORT.md
+        echo "" >> BUILD_REPORT.md
+        echo "## Time: $(date)" >> BUILD_REPORT.md
+        echo "" >> BUILD_REPORT.md
+        if [ "${{ env.BUILD_STATUS }}" = "success" ]; then
+          echo "## APK Size: ${{ env.APK_SIZE }}" >> BUILD_REPORT.md
+          echo "" >> BUILD_REPORT.md
+          echo "✅ Build successful!" >> BUILD_REPORT.md
+        else
+          echo "## Error Log:" >> BUILD_REPORT.md
+          echo "\`\`\`" >> BUILD_REPORT.md
+          tail -100 build.log >> BUILD_REPORT.md
+          echo "\`\`\`" >> BUILD_REPORT.md
+        fi
+    
+    - name: Upload APK
+      if: env.BUILD_STATUS == 'success'
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk
+    
+    - name: Upload build report
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-report
+        path: BUILD_REPORT.md
