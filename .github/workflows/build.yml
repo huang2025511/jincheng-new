@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build APK
 
 on:
   push:
@@ -13,48 +13,31 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up JDK
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
+        cache: 'gradle'
     
-    - name: Debug info
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+    
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+    
+    - name: Build with Gradle
+      run: ./gradlew assembleDebug --stacktrace
+    
+    - name: List build outputs
       run: |
-        java -version
-        echo "JAVA_HOME=$JAVA_HOME"
-        which java
-        java -Xmx512m -version
+        ls -la app/build/outputs/apk/debug/
+        echo "---"
+        find app/build -name "*.apk"
     
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v2
-    
-    - name: Build Debug APK
-      run: |
-        chmod +x gradlew
-        ./gradlew --version
-        ./gradlew assembleDebug --no-daemon --info 2>&1 | tee build.log || cat build.log
-    
-    - name: Run Unit Tests
-      run: |
-        ./gradlew testDebugUnitTest --no-daemon --info 2>&1 | tee test.log || cat test.log
-    
-    - name: Upload APK Artifact
-      if: success()
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
+        name: app-debug-apk
         path: app/build/outputs/apk/debug/app-debug.apk
-    
-    - name: Upload Test Results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: app/build/test-results/
-    
-    - name: Debug build log
-      if: failure()
-      run: |
-        echo "=== Build Log (last 200 lines) ==="
-        tail -200 build.log 2>/dev/null || echo "No build log found"
+        retention-days: 30
