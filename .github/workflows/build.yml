@@ -23,10 +23,24 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
+        run: |
+          ./gradlew :app:assembleDebug --stacktrace 2>&1 | tee build.log
+          echo "=== Build completed with exit code $? ==="
+          cat build.log || true
+
+      - name: Debug - Check build directory
+        if: failure()
+        run: |
+          echo "=== Checking build directory structure ==="
+          ls -la app/build/ 2>/dev/null || echo "app/build does not exist"
+          ls -la app/build/outputs/ 2>/dev/null || echo "app/build/outputs does not exist"
+          ls -la app/build/outputs/apk/ 2>/dev/null || echo "app/build/outputs/apk does not exist"
+          echo "=== Checking APK files ==="
+          find app/build -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
