@@ -1,7 +1,2 @@
 <resources>
-    <style name="Theme.ProcessManager" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="colorPrimaryDark">@color/primary</item>
-        <item name="colorAccent">@color/secondary</item>
-    </style>
 </resources>
