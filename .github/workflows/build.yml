@@ -22,6 +22,11 @@ jobs:
       - name: Grant execute permission to Gradle
         run: chmod +x ./gradlew
 
+      - name: List Gradle tasks (for debugging)
+        run: |
+          ./gradlew tasks --all > tasks.log || true
+          ls -la
+
       - name: Build Debug APK
         run: |
           ./gradlew :app:assembleDebug --stacktrace 2>&1 | tee build.log
@@ -44,11 +49,17 @@ jobs:
           echo ""
           echo "=== Finding all APK files ==="
           find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+          echo ""
+          echo "=== Finding all output files ==="
+          find . -type f -name "*.apk" -o -name "*.aab" -o -name "*.jar" 2>/dev/null || true
 
-      - name: Upload APK
+      - name: Upload all artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: build-artifacts
           path: |
-            app/build/outputs/apk/debug/*.apk
             **/*.apk
+            **/*.aab
+            **/*.jar
+            *.log
+            app/build/outputs/
