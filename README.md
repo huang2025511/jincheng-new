@@ -99,3 +99,7 @@ git clone https://github.com/huang2025511/processviewer2026.git
 ## 许可证
 
 本项目仅供学习和研究使用。
+
+## 构建说明
+
+APK 由 GitHub Actions 自动构建，可在 Actions 页面的 Artifacts 中下载。
