@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.processmanager.app.models.ProcessCategory
 import com.processmanager.app.models.ProcessInfo
 import com.processmanager.app.viewmodels.ProcessViewModel
@@ -48,19 +47,10 @@ fun ProcessListScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val needsUsagePermission by viewModel.needsUsagePermission.collectAsState()
 
-    // 生命周期感知，当用户回到应用时重新检查权限和加载数据
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.checkUsagePermission(context)
-                viewModel.loadRecentTasks(context)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+    // 检查使用统计权限
+    LaunchedEffect(Unit) {
+        viewModel.checkUsagePermission(context)
+        viewModel.loadRecentTasks(context)
     }
 
     Scaffold(
@@ -99,7 +89,7 @@ fun ProcessListScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Clock, contentDescription = "最近使用")
+                            Icon(Icons.Default.Refresh, contentDescription = "最近使用")
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "最近使用",
