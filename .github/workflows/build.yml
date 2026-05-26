@@ -28,9 +28,9 @@ jobs:
           ls -la
 
       - name: Build All APKs (Debug + Release)
-      run: |
-        ./gradlew :app:assemble --stacktrace 2>&1 | tee build.log
-        echo "=== Build completed with exit code $? ==="
+        run: |
+          ./gradlew :app:assemble --stacktrace 2>&1 | tee build.log
+          echo "=== Build completed with exit code $? ==="
 
       - name: Debug - Check build directory structure
         run: |
