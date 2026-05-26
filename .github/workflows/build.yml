@@ -1,102 +1,29 @@
 name: Build APK
-
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
-
-      - name: Grant execute permission to Gradle
-        run: chmod +x ./gradlew
-
-      - name: Check Gradle version
+      
+      - name: Build APK
         run: |
-          ./gradlew --version
-          echo "=== Project structure ==="
-          ls -la
-
-      - name: Check Android SDK setup
-        run: |
-          echo "ANDROID_HOME: $ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
-          if [ -d "$ANDROID_HOME" ]; then
-            ls -la "$ANDROID_HOME"
-          else
-            echo "Android SDK not found at ANDROID_HOME"
-          fi
-
-      - name: Build Debug APK with verbose output
-        run: |
-          echo "=== Starting Gradle build ==="
-          ./gradlew :app:assembleDebug --stacktrace --info 2>&1 | tee build.log
-          BUILD_EXIT_CODE=${PIPESTATUS[0]}
-          echo "=== Build completed with exit code $BUILD_EXIT_CODE ==="
-          
-          if [ $BUILD_EXIT_CODE -ne 0 ]; then
-            echo "ERROR: Gradle build failed!"
-            echo "=== Last 100 lines of build log ==="
-            tail -100 build.log
-            exit 1
-          fi
-
-      - name: Debug - Check complete build directory
-        run: |
-          echo "=== Checking build directory structure ==="
-          ls -la app/ 2>/dev/null || echo "app/ directory not found"
-          echo ""
-          ls -la app/build/ 2>/dev/null || echo "app/build/ not found"
-          echo ""
-          if [ -d "app/build" ]; then
-            echo "=== Finding all files in app/build ==="
-            find app/build -type f | head -50
-            echo ""
-            echo "=== Looking for APK files ==="
-            find app/build -name "*.apk" -type f 2>/dev/null || echo "No APK files found in app/build"
-          fi
-
-      - name: Verify APK exists
-        run: |
-          echo "=== Verifying APK file ==="
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            echo "SUCCESS: APK file found!"
-            ls -lh app/build/outputs/apk/debug/app-debug.apk
-            echo "File size: $(stat -f%z app/build/outputs/apk/debug/app-debug.apk 2>/dev/null || stat -c%s app/build/outputs/apk/debug/app-debug.apk) bytes"
-          else
-            echo "ERROR: APK file NOT found at app/build/outputs/apk/debug/app-debug.apk"
-            echo "Searching entire app/build directory for any APK files..."
-            find app/build -name "*.apk" -type f
-            echo "Listing all files in app/build/outputs:"
-            ls -laR app/build/outputs/ 2>/dev/null || echo "Directory does not exist"
-            exit 1
-          fi
-
-      - name: Upload APK as artifact
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --stacktrace
+      
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
-
-      - name: Upload build logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          path: |
-            build.log
-            app/build/outputs/
-          retention-days: 7
