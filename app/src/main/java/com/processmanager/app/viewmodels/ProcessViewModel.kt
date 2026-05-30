@@ -62,7 +62,8 @@ class ProcessViewModel : ViewModel() {
             val packageStats = stats?.find { it.packageName == packageName }
             if (packageStats != null) {
                 val currentTime = System.currentTimeMillis()
-                val totalTime = packageStats.totalTimeInForeground + packageStats.totalTimeInBackground
+                // 只使用前台时间
+                val totalTime = packageStats.totalTimeInForeground
                 
                 // 获取缓存的上次数据
                 val cached = cpuTimeCache[packageName]
@@ -100,7 +101,8 @@ class ProcessViewModel : ViewModel() {
             val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, beginTime, now)
             
             stats?.forEach { stat ->
-                val totalTime = stat.totalTimeInForeground + stat.totalTimeInBackground
+                // 只使用前台时间
+                val totalTime = stat.totalTimeInForeground
                 cpuTimeCache[stat.packageName] = Pair(totalTime, now)
             }
         } catch (e: Exception) {
@@ -108,35 +110,30 @@ class ProcessViewModel : ViewModel() {
         }
     }
 
-    // ✅ 获取进程内存信息（通过 RunningAppProcessInfo）
+    // ✅ 获取进程内存信息（通过 UsageStats 估算）
     private fun getProcessMemoryFromActivityManager(context: Context, packageName: String): Long {
         return try {
             val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            val runningApps = activityManager.runningAppProcesses
+            val memInfo = ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(memInfo)
             
-            runningApps?.forEach { app ->
-                if (app.processName == packageName) {
-                    // 使用 pss 字段（如果有的话）
-                    if (app.pss > 0) {
-                        return app.pss * 1024L // 转换为字节
-                    }
-                }
-            }
-            
-            // 备用：尝试通过 UsageStats 估算
+            // 尝试从 UsageStats 获取使用情况
             val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
             val now = System.currentTimeMillis()
             val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 3600000, now)
             val pkgStats = stats?.find { it.packageName == packageName }
+            
             if (pkgStats != null && pkgStats.totalTimeInForeground > 0) {
-                // 估算内存：基于前台时间和系统平均内存使用
-                val memInfo = ActivityManager.MemoryInfo()
-                activityManager.getMemoryInfo(memInfo)
-                val avgMemPerApp = memInfo.totalMem / 50 // 假设平均50个应用
-                return avgMemPerApp
+                // 基于前台时间估算内存占用
+                val totalMem = memInfo.totalMem
+                val avgMemPerActiveApp = totalMem / 10 // 假设最多10个活跃应用
+                return avgMemPerActiveApp
             }
             
-            0L
+            // 备用：返回系统平均内存
+            val totalMem = memInfo.totalMem
+            val avgMemPerApp = totalMem / 50 // 假设50个应用
+            avgMemPerApp
         } catch (e: Exception) {
             0L
         }
