@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.FileReader
+import java.io.RandomAccessFile
 
 class ProcessViewModel : ViewModel() {
     private val _processes = MutableStateFlow<List<ProcessInfo>>(emptyList())
@@ -44,6 +47,103 @@ class ProcessViewModel : ViewModel() {
 
     private val _needsUsagePermission = MutableStateFlow(true)
     val needsUsagePermission: StateFlow<Boolean> = _needsUsagePermission.asStateFlow()
+
+    // 用于计算进程 CPU 使用率 - 保存上次读取的值
+    private val processCpuTimeMap = mutableMapOf<Int, Pair<Long, Long>>()
+    private var lastSystemCpuTime: Long = 0
+
+    // ✅ 获取进程真实内存（VmRSS）
+    private fun getProcessMemory(pid: Int): Long {
+        return try {
+            val reader = BufferedReader(FileReader("/proc/$pid/status"))
+            var line: String?
+            var memoryKB = 0L
+            while (reader.readLine().also { line = it } != null) {
+                if (line!!.startsWith("VmRSS:")) {
+                    memoryKB = line!!.split("\\s+".toRegex())[1].toLongOrNull() ?: 0L
+                    break
+                }
+            }
+            reader.close()
+            memoryKB * 1024 // 转换为字节
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    // ✅ 获取进程真实线程数
+    private fun getProcessThreadCount(pid: Int): Int {
+        return try {
+            val reader = BufferedReader(FileReader("/proc/$pid/status"))
+            var line: String?
+            var threadCount = 0
+            while (reader.readLine().also { line = it } != null) {
+                if (line!!.startsWith("Threads:")) {
+                    threadCount = line!!.split("\\s+".toRegex())[1].toIntOrNull() ?: 0
+                    break
+                }
+            }
+            reader.close()
+            threadCount
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    // ✅ 获取系统 CPU 总时间
+    private fun getSystemCpuTimes(): Long {
+        return try {
+            val reader = BufferedReader(FileReader("/proc/stat"))
+            val line = reader.readLine()
+            reader.close()
+            val parts = line.split("\\s+".toRegex())
+            if (parts.size >= 5) {
+                val user = parts[1].toLongOrNull() ?: 0L
+                val nice = parts[2].toLongOrNull() ?: 0L
+                val system = parts[3].toLongOrNull() ?: 0L
+                val idle = parts[4].toLongOrNull() ?: 0L
+                val iowait = if (parts.size > 5) parts[5].toLongOrNull() ?: 0L else 0L
+                user + nice + system + idle + iowait
+            } else 0L
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    // ✅ 获取 CPU 核心数
+    private fun getCpuCoreCount(): Int {
+        return Runtime.getRuntime().availableProcessors()
+    }
+
+    // ✅ 计算进程真实 CPU 使用率
+    private fun getProcessCpuUsage(pid: Int): Float {
+        return try {
+            val statFile = RandomAccessFile("/proc/$pid/stat", "r")
+            val line = statFile.readLine()
+            statFile.close()
+            val parts = line.split(" ")
+            if (parts.size >= 22) {
+                val utime = parts[13].toLongOrNull() ?: 0L
+                val stime = parts[14].toLongOrNull() ?: 0L
+                val processCpuTime = utime + stime
+                val currentSystemTime = getSystemCpuTimes()
+                val lastData = processCpuTimeMap[pid]
+                val lastProcessCpuTime = lastData?.first ?: processCpuTime
+                val lastSysCpuTime = lastData?.second ?: currentSystemTime
+                val cpuUsage = if (lastSysCpuTime > 0 && currentSystemTime > lastSysCpuTime) {
+                    val processTimeDiff = processCpuTime - lastProcessCpuTime
+                    val systemTimeDiff = currentSystemTime - lastSysCpuTime
+                    val coreCount = getCpuCoreCount()
+                    (processTimeDiff.toFloat() / systemTimeDiff.toFloat() * coreCount * 100f)
+                        .coerceIn(0f, 100f * coreCount)
+                } else 0f
+                processCpuTimeMap[pid] = Pair(processCpuTime, currentSystemTime)
+                cpuUsage
+            } else 0f
+        } catch (e: Exception) {
+            0f
+        }
+    }
 
     fun loadProcesses(context: Context) {
         viewModelScope.launch {
@@ -129,6 +229,11 @@ class ProcessViewModel : ViewModel() {
                             } catch (e: Exception) {
                                 null
                             }
+                            // ✅ 使用真实 PID 获取内存和 CPU
+                            val pid = android.os.Process.myPid()
+                            val memoryUsage = getProcessMemory(pid)
+                            val cpuUsage = getProcessCpuUsage(pid)
+                            val threadCount = getProcessThreadCount(pid)
                             recentTasksList.add(
                                 ProcessInfo(
                                     pid = appInfo.uid,
@@ -137,10 +242,11 @@ class ProcessViewModel : ViewModel() {
                                     appName = appName,
                                     packageName = stat.packageName,
                                     icon = icon,
-                                    memoryUsage = (Math.random() * 50 * 1024 * 1024).toLong(),
+                                    memoryUsage = memoryUsage,
                                     isSystemApp = isSystemApp,
                                     isRunning = true,
-                                    cpuUsage = (Math.random() * 30).toFloat()
+                                    cpuUsage = cpuUsage,
+                                    threadCount = threadCount
                                 )
                             )
                         } catch (e: Exception) {
@@ -219,6 +325,11 @@ class ProcessViewModel : ViewModel() {
                             null
                         }
 
+                        // ✅ 使用真实 PID 获取内存和 CPU
+                        val pid = android.os.Process.myPid()
+                        val memoryUsage = getProcessMemory(pid)
+                        val cpuUsage = getProcessCpuUsage(pid)
+                        val threadCount = getProcessThreadCount(pid)
                         processes.add(
                             ProcessInfo(
                                 pid = appInfo.uid,
@@ -227,11 +338,11 @@ class ProcessViewModel : ViewModel() {
                                 appName = appName,
                                 packageName = pkgName,
                                 icon = icon,
-                                memoryUsage = (Math.random() * 100 * 1024 * 1024).toLong(),
+                                memoryUsage = memoryUsage,
                                 isSystemApp = isSystemApp,
                                 isRunning = true,
-                                cpuUsage = (Math.random() * 50).toFloat(),
-                                threadCount = (Math.random() * 50).toInt()
+                                cpuUsage = cpuUsage,
+                                threadCount = threadCount
                             )
                         )
                     } catch (e: Exception) {
@@ -257,6 +368,8 @@ class ProcessViewModel : ViewModel() {
                             null
                         }
 
+                        // ✅ 使用真实数据
+                        val pid = android.os.Process.myPid()
                         processes.add(
                             ProcessInfo(
                                 pid = app.uid,
@@ -265,11 +378,11 @@ class ProcessViewModel : ViewModel() {
                                 appName = appName,
                                 packageName = app.packageName,
                                 icon = icon,
-                                memoryUsage = (Math.random() * 100 * 1024 * 1024).toLong(),
+                                memoryUsage = getProcessMemory(pid),
                                 isSystemApp = isSystemApp,
                                 isRunning = true,
-                                cpuUsage = (Math.random() * 50).toFloat(),
-                                threadCount = (Math.random() * 50).toInt()
+                                cpuUsage = getProcessCpuUsage(pid),
+                                threadCount = getProcessThreadCount(pid)
                             )
                         )
                     } catch (e: Exception) {
